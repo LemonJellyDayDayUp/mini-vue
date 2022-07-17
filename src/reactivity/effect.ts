@@ -1,4 +1,7 @@
-import { extend } from '../shared/index.js'
+import { extend } from '../shared/index'
+
+let activeEffect
+let shouldTrack
 
 class ReactiveEffect {
 
@@ -16,10 +19,20 @@ class ReactiveEffect {
     this.scheduler = scheduler
   }
 
+  // 执行 fn 并把 fn 的参数返回出去
   run() {
+
+    if (!this.active) return this._fn()
+    
+    // 当前依赖没被 stop 停掉
+    shouldTrack = true
     activeEffect = this
-    // 执行 fn 并把 fn 的参数返回出去
-    return this._fn()
+    const res = this._fn()
+    // 重置 shouldTrack
+    shouldTrack = false
+
+    return res
+
   }
 
   stop() {
@@ -38,12 +51,16 @@ function cleanupEffect(effect) {
   effect.deps.forEach((dep: any) => {
     dep.delete(effect)
   })
+  // 清空 effect
+  effect.deps.length = 0
 }
 
 const targetMap = new Map()
 
 // 收集依赖
 export function track(target, key) {
+
+  if (!isTracking()) return
 
   let depsMap = targetMap.get(target)
   if (!depsMap) {
@@ -57,13 +74,19 @@ export function track(target, key) {
     depsMap.set(key, dep)
   }
 
-  // 进行普通 get 操作时并不会收集到依赖 activeEffect 为空
-  if (!activeEffect) return
-
+  // activeEffect 已经在 dep 中
+  if (dep.has(activeEffect)) return
   dep.add(activeEffect)
   // 在 effect 里存储 (存了该effect的) dep
   activeEffect.deps.push(dep)
 
+}
+
+function isTracking() {
+  // 进行普通 get 操作时并不会收集到依赖 activeEffect 为 undefined
+  // 只有在 fn 里进行 get 操作才能收集依赖
+  // 被 stop 停掉的依赖不能再次收集
+  return shouldTrack && activeEffect !== undefined
 }
 
 // 触发依赖
@@ -77,7 +100,6 @@ export function trigger(target, key) {
   }
 }
 
-let activeEffect
 export function effect(fn, options: any = {}) {
   const _effect = new ReactiveEffect(fn, options.scheduler)
 

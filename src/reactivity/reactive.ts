@@ -1,40 +1,28 @@
-import { track, trigger } from './effect'
+import { mutableHandlers, readonlyHandlers } from './baseHandlers'
 
-export function reactive(rew) {
-  return new Proxy (rew, {
-  
-    get(target, key) {
-      const res = Reflect.get(target, key)
-      // 收集依赖
-      track(target, key)
-      return res
-    },
-
-    set(target, key, value) {
-      const res = Reflect.set(target, key, value)
-      // 触发依赖
-      trigger(target, key)
-      return res
-    }
-
-  })
+export const enum ReactiveFlags {
+  IS_REACTIVE = "__v_isReactive",
+  IS_READONLY = "__v_isReadonly",
 }
 
-export function readonly(rew) {
-  return new Proxy (rew, {
+export function reactive(raw) {
+  return createActiveObject(raw, mutableHandlers)
+}
 
-    get(target, key) {
-      const res = Reflect.get(target, key)
-      return res
-    },
+export function readonly(raw) {
+  return createActiveObject(raw, readonlyHandlers)
+}
 
-    set(target, key) {
-      // readonly 不可以被 set
-      console.warn(
-        `key: "${String(key)}" set 失败, 因为 target 是 readonly 类型`,
-        target
-      )
-      return true
-    }
-  })
+export function isReactive(value) {
+  // 将 undefined 取两次反转换为 false
+  return !!value[ReactiveFlags.IS_REACTIVE]
+}
+
+export function isReadonly(value) {
+  // 将 undefined 取两次反转换为 false
+  return !!value[ReactiveFlags.IS_READONLY]
+}
+
+function createActiveObject(raw, baseHandlers) {
+  return new Proxy(raw, baseHandlers)
 }

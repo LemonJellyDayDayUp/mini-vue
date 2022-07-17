@@ -85,8 +85,12 @@ describe('effect', () => {
 
     // 调用 stop 后响应式对象更新将不会触发该依赖
     stop(runner)
-    obj.prop = 2
+    obj.prop ++
     expect(dummy).toBe(1)
+
+    // 优化前 obj.prop++ 测试会失败
+    // obj.prop++ 相当于 obj.prop = obj.prop + 1
+    // 触发 get 操作会把当前的 activeEffect 再收集一遍
 
     // 再调用 runner 会重新触发该依赖
     runner()
