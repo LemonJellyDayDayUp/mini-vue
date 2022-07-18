@@ -1,4 +1,4 @@
-import { readonly, isReadonly } from '../reactive'
+import { readonly, isReadonly, isProxy } from '../reactive'
 
 describe('readonly', () => {
 
@@ -10,8 +10,16 @@ describe('readonly', () => {
     expect(wrapped).not.toBe(original)
     expect(wrapped.foo).toBe(1)
 
+    // isReadonly
     expect(isReadonly(wrapped)).toBe(true)
     expect(isReadonly(original)).toBe(false)
+
+    // 嵌套
+    expect(isReadonly(wrapped.bar)).toBe(true)
+    expect(isReadonly(original.bar)).toBe(false)
+
+    // isProxy
+    expect(isProxy(wrapped)).toBe(true)
 
   })
 
@@ -22,7 +30,7 @@ describe('readonly', () => {
     const user = readonly({ age: 10 })
     user.age = 11
 
-    expect(console.warn).toBeCalled()
+    expect(console.warn).toHaveBeenCalled()
 
   })
 

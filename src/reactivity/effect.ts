@@ -74,25 +74,33 @@ export function track(target, key) {
     depsMap.set(key, dep)
   }
 
-  // activeEffect 已经在 dep 中
-  if (dep.has(activeEffect)) return
-  dep.add(activeEffect)
-  // 在 effect 里存储 (存了该effect的) dep
-  activeEffect.deps.push(dep)
+  trackEffects(dep)
 
 }
 
-function isTracking() {
+export function isTracking() {
   // 进行普通 get 操作时并不会收集到依赖 activeEffect 为 undefined
   // 只有在 fn 里进行 get 操作才能收集依赖
   // 被 stop 停掉的依赖不能再次收集
   return shouldTrack && activeEffect !== undefined
 }
 
+export function trackEffects(dep) {
+  // activeEffect 已经在 dep 中
+  if (dep.has(activeEffect)) return
+  dep.add(activeEffect)
+  // 在 effect 里存储 (存了该effect的) dep
+  activeEffect.deps.push(dep)
+}
+
 // 触发依赖
 export function trigger(target, key) {
   const depsMap = targetMap.get(target)
   const dep = depsMap.get(key)
+  triggerEffects(dep)
+}
+
+export function triggerEffects(dep) {
   for (const effect of dep) {
     // 有 scheduler 时执行 scheduler
     if (effect.scheduler) effect.scheduler()
